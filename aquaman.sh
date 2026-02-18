@@ -94,9 +94,9 @@ done
 
 echo ">>> Miscelaneus Adjustments"
 
-adb shell settings put global animator_duration_scale 0
-adb shell settings put global window_animation_scale 0
-adb shell settings put global transition_animation_scale 0
+adb shell settings put global animator_duration_scale 1
+adb shell settings put global window_animation_scale 0.5
+adb shell settings put global transition_animation_scale 1
 adb shell settings put global debug.hwui.renderer skiagl
 adb shell settings put global background_process_limit 1
 adb shell settings put global activity_manager_constants max_cached_processes=8
