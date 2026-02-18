@@ -85,9 +85,6 @@ adb shell settings put secure enabled_accessibility_services com.spocky.projengm
 adb shell cmd package set-home-activity com.spocky.projengmenu/.ui.home.MainActivity
 
 echo "=== All Done ==="
-echo ">>> Rebooting device..."
-adb reboot
-
 
 
 # I have to do this shit because Google
