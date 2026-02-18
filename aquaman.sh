@@ -65,6 +65,7 @@ PACKAGES=(
     "com.google.android.youtube.tvmusic"
     "com.amazon.amazonvideo.livingroom"
     "com.netflix.ninja"
+    "com.google.android.youtube.tv"
 )
 
 echo "=== PRO ANDROID SCRIPT - Mi TV Stick ==="
