@@ -59,7 +59,6 @@ PACKAGES=(
     "tv.alphonso.alphonso_eula"
     "android.autoinstalls.config.xioami.mibox3"
     "android.autoinstalls.config.xiaomi.mibox3"
-
     # -- Preinstaled APPS
     "com.google.android.videos"
     "com.google.android.play.games"
