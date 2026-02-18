@@ -102,8 +102,8 @@ adb shell settings put global device_config_sync_disabled_for_tests persistent
 
 echo ">>> Installing new launcher"
 
-curl -o launcher.apk https://github.com/spocky/miproja1/releases/download/4.68/ProjectivyLauncher-4.68-c82-xda-release.apk
-adb install launcher.apk
+wget https://github.com/spocky/miproja1/releases/download/4.68/ProjectivyLauncher-4.68-c82-xda-release.apk
+adb install ProjectivyLauncher-4.68-c82-xda-release.apk
 
 echo "=== Alllllllll Ready ==="
 echo ">>> Rebooting the little thing :)"
