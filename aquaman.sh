@@ -97,12 +97,10 @@ adb shell settings put global animator_duration_scale 0
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global debug.hwui.renderer skiagl
-adb shell setprop persist.sys.ui.hw true
 adb shell settings put global background_process_limit 1
 adb shell settings put global activity_manager_constants max_cached_processes=8
 adb shell settings put global activity_manager_constants background_settle_time=0
 adb shell setprop persist.logd.size 1M
-
 adb shell settings put global device_config_sync_disabled_for_tests persistent
 
 
@@ -115,8 +113,7 @@ adb shell pm grant com.spocky.projengmenu android.permission.WRITE_EXTERNAL_STOR
 adb shell pm grant com.spocky.projengmenu android.permission.READ_EXTERNAL_STORAGE
 adb shell pm grant com.spocky.projengmenu android.permission.READ_PHONE_STATE
 adb shell pm grant com.spocky.projengmenu android.permission.READ_TV_LISTINGS
-adb shell pm grant com.spocky.projengmenu com.android.providers.tv.permission.READ_EPG_DATA
-adb shell pm grant com.spocky.projengmenu com.android.providers.tv.permission.WRITE_EPG_DATA
+
 adb shell settings put secure enabled_notification_listeners com.spocky.projengmenu/com.spocky.projengmenu.services.notification.NotificationListener
 adb shell settings put secure accessibility_enabled 1
 adb shell settings put secure enabled_accessibility_services com.spocky.projengmenu/com.spocky.projengmenu.services.ProjectivyAccessibilityService
@@ -126,3 +123,8 @@ adb shell cmd package set-home-activity com.spocky.projengmenu/.ui.home.MainActi
 echo "=== Alllllllll Ready ==="
 echo ">>> Rebooting the little thing :)"
 adb reboot
+
+
+echo "After this, you should go to developer options and change"
+echo "buffer registry size: 1M"
+echo "background processes: Any or 1"
