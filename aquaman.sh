@@ -90,6 +90,7 @@ for pkg in "${PACKAGES[@]}"; do
     fi
 done
 
+
 echo ">>> Miscelaneus Adjustments"
 
 adb shell settings put global window_animation_scale 0
@@ -100,10 +101,22 @@ adb shell setprop persist.logd.size 1M
 
 adb shell settings put global device_config_sync_disabled_for_tests persistent
 
+
 echo ">>> Installing new launcher"
 
 wget https://github.com/spocky/miproja1/releases/download/4.68/ProjectivyLauncher-4.68-c82-xda-release.apk
 adb install ProjectivyLauncher-4.68-c82-xda-release.apk
+adb shell pm grant com.spocky.projengmenu android.permission.WRITE_EXTERNAL_STORAGE
+adb shell pm grant com.spocky.projengmenu android.permission.READ_EXTERNAL_STORAGE
+adb shell pm grant com.spocky.projengmenu android.permission.READ_PHONE_STATE
+adb shell pm grant com.spocky.projengmenu android.permission.READ_TV_LISTINGS
+adb shell pm grant com.spocky.projengmenu com.android.providers.tv.permission.READ_EPG_DATA
+adb shell pm grant com.spocky.projengmenu com.android.providers.tv.permission.WRITE_EPG_DATA
+adb shell settings put secure enabled_notification_listeners com.spocky.projengmenu/com.spocky.projengmenu.services.notification.NotificationListener
+adb shell settings put secure accessibility_enabled 1
+adb shell settings put secure enabled_accessibility_services com.spocky.projengmenu/com.spocky.projengmenu.services.ProjectivyAccessibilityService
+adb shell cmd package set-home-activity com.spocky.projengmenu/.ui.home.MainActivity
+
 
 echo "=== Alllllllll Ready ==="
 echo ">>> Rebooting the little thing :)"
