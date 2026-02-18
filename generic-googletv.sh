@@ -19,14 +19,20 @@ fi
 
 # Packages to remove/disable
 PACKAGES=(
-    "com.google.android.apps.tv.launcherx"
-    "com.disney.disneyplus"
-    "com.movistarplus.androidtv"
-    "com.google.android.apps.tv.launcherx"
+    # Android services
     "com.google.android.feedback"
     "com.google.android.syncadapters.calendar"
     "com.android.adservices.api"
-
+    # Random preinstalled apps
+    "com.disney.disneyplus"
+    "com.movistarplus.androidtv"
+    "com.wbd.stream"
+    "com.netflix.ninja"
+    "com.google.android.play.games"
+    "com.amazon.amazonvideo.livingroom"
+    # TD Systems
+    "com.electronic.manual"
+    "com.mediatek.wwtv.mediaplayer"
 )
 
 echo "=== PRO ANDROID TV SCRIPT - Google TV 14 ==="
@@ -81,3 +87,29 @@ adb shell cmd package set-home-activity com.spocky.projengmenu/.ui.home.MainActi
 echo "=== All Done ==="
 echo ">>> Rebooting device..."
 adb reboot
+
+
+
+# I have to do this shit because Google
+echo
+echo "=============================================="
+echo "[ATTENTION] Before proceeding, you MUST enable"
+echo "the option to replace the current launcher with Projectivy."
+echo "Projectivity settings > General > Replace actual launcher"
+echo "In case you love Google TV launcher just close the script"
+echo "Type 'yes' to continue:"
+
+read -r user_confirm
+
+if [[ "$user_confirm" != "yes" ]]; then
+    echo "[INFO] Launcher replacement not confirmed. Exiting script."
+    exit 0
+fi
+
+echo "[INFO] Proceeding to disable original launcher..."
+adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx && echo "[OK] com.google.android.apps.tv.launcherx disabled."
+
+adb reboot
+
+echo "If your tv screen remains black, use this command to renable the launcher"
+echo "adb shell pm enable com.google.android.apps.tv.launcherx"
