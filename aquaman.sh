@@ -162,7 +162,7 @@ remove_pkg "com.android.sharedstoragebackup"          "Backup de almacenamiento 
 section "7/8 · CHROMECAST RECEIVER"
 # No se usa Chromecast; mediashell corre en background constantemente
 
-remove_pkg "com.google.android.apps.mediashell" "Receptor Chromecast (Cast receiver)"
+#remove_pkg "com.google.android.apps.mediashell" "Receptor Chromecast (Cast receiver)"
 
 # ── 8. APPS PREINSTALADAS Y MISCELÁNEA ───────────────────────────────────────
 section "8/8 · APPS PREINSTALADAS Y MISCELÁNEA"
