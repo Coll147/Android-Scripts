@@ -1,13 +1,13 @@
 #!/bin/bash
 # ==============================================================================
-#  Mi TV/Stick Optimizer — Módulo Core Central (core.sh)
+#  Core
 # ==============================================================================
 
 set -uo pipefail
 
-# ── Colores y Formato ────────────────────────────────────────────────────────
-RED='\033;31m';  GREEN='\033;32m'; YELLOW='\033[1;33m'
-BLUE='\033;34m'; CYAN='\033;36m';  BOLD='\033[1m'; NC='\033[0m'
+# ── Colores y Formato (Corregidos) ───────────────────────────────────────────
+RED='\033[0;31m';  GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m';  BOLD='\033[1m'; NC='\033[0m'
 
 # ── Contadores Globales ───────────────────────────────────────────────────────
 REMOVED=0; DISABLED=0; SKIPPED=0; FAILED=0
@@ -46,25 +46,36 @@ remove_pkg() {
     fi
 }
 
-# ── Descarga de la última Beta de Projectivy Launcher ─────────────────────────
+# ── Descarga Inteligente de Projectivy Launcher (Anti-Rate-Limit) ─────────────
 download_projectivy() {
     local target_file="$1"
     local repo="spocky/ProjectivyLauncher"
     
+    # SALVAGUARDA: Si el archivo ya existe localmente, evita llamar a la API de GitHub
+    if [[ -f "$target_file" && -s "$target_file" ]]; then
+        ok "Projectivy Launcher ya se encuentra en 'apks/'. Saltando descarga."
+        return 0
+    fi
+    
     info "Buscando la última versión de Projectivy Launcher (incluyendo betas)..."
     local download_url=""
     
+    # Forzamos un User-Agent común para que GitHub no rechace la petición remota
     if command -v curl &>/dev/null; then
-        download_url=$(curl -s "https://api.github.com/repos/${repo}/releases" | grep -oP '"browser_download_url":\s*"\K[^"]+\.apk' | head -n 1)
+        download_url=$(curl -sSL -A "Mozilla/5.0 (X11; Linux x86_64)" "https://api.github.com/repos/${repo}/releases" | grep -oP '"browser_download_url":\s*"\K[^"]+\.apk' | head -n 1)
     elif command -v wget &>/dev/null; then
-        download_url=$(wget -qO- "https://api.github.com/repos/${repo}/releases" | grep -oP '"browser_download_url":\s*"\K[^"]+\.apk' | head -n 1)
+        download_url=$(wget -qO- --user-agent="Mozilla/5.0 (X11; Linux x86_64)" "https://api.github.com/repos/${repo}/releases" | grep -oP '"browser_download_url":\s*"\K[^"]+\.apk' | head -n 1)
     else
         error "Se requiere curl o wget para descargar Projectivy Launcher automáticamente."
         exit 1
     fi
 
     if [[ -z "$download_url" ]]; then
-        error "No se pudo encontrar ninguna URL de descarga en el repositorio de GitHub."
+        error "No se pudo obtener la URL de descarga (Límite de la API de GitHub alcanzado o sin red)."
+        warn "Para saltarte este bloqueo de GitHub de forma manual:"
+        echo -e "  1. Descarga cualquier APK de Projectivy desde: https://github.com/spocky/ProjectivyLauncher/releases"
+        echo -e "  2. Muévelo y renombralo exactamente como: ${BOLD}apks/proyectivity.apk${NC}"
+        echo -e "  3. Vuelve a lanzar tu script. ¡Se lo saltará y funcionará directo!"
         exit 1
     fi
 
@@ -73,15 +84,15 @@ download_projectivy() {
     info "Descargando APK en la carpeta de instalación..."
 
     if command -v curl &>/dev/null; then
-        curl -L -o "$target_file" "$download_url"
+        curl -L -A "Mozilla/5.0 (X11; Linux x86_64)" -o "$target_file" "$download_url"
     else
-        wget -O "$target_file" "$download_url"
+        wget --user-agent="Mozilla/5.0 (X11; Linux x86_64)" -O "$target_file" "$download_url"
     fi
 
     if [[ -f "$target_file" && -s "$target_file" ]]; then
-        ok "Projectivy Launcher listo para instalar."
+        ok "Projectivy Launcher descargado y listo."
     else
-        error "Fallo al descargar el archivo APK de Projectivy."
+        error "Fallo al escribir el archivo APK en el disco."
         exit 1
     fi
 }
