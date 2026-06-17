@@ -1,12 +1,11 @@
 #!/bin/bash
 # ==============================================================================
 #  Mi TV Stick Optimizer — Android TV 9
-#  Claude ha cocinado esta vez
 #
 #  Requisitos:
 #    - adb instalado y en el PATH
+#    - curl o wget instalados (para descargar el APK)
 #    - Dispositivo conectado y autorizado (depuración ADB activada)
-#    - proyectivity.apk y tvquickactions.apk en la misma carpeta que este script
 # ==============================================================================
 
 set -uo pipefail
@@ -24,7 +23,7 @@ ok()      { echo -e "${GREEN}[OK]${NC}    $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error()   { echo -e "${RED}[ERR]${NC}   $*"; }
 skip()    { echo -e "        ${NC}↷ Saltado: $*"; }
-section() { echo -e "\n${BOLD}${CYAN}▓▓▒░  $*  ░▒▓▓${NC}\n"; }
+section() { echo -e "\n${BOLD}${CYAN}▓▓▒░  $* ░▒▓▓${NC}\n"; }
 
 # ── Función principal de eliminación ─────────────────────────────────────────
 remove_pkg() {
@@ -49,6 +48,48 @@ remove_pkg() {
     else
         error "No se pudo eliminar ni deshabilitar: $pkg"
         ((FAILED++))
+    fi
+}
+
+# ── Descargar última versión (Beta/Pre-release) de Projectivy ─────────────────
+download_projectivy() {
+    local target_file="$1"
+    local repo="spocky/ProjectivyLauncher"
+    
+    info "Buscando la última versión de Projectivy Launcher (incluyendo betas)..."
+    
+    # Obtener el JSON de todas las releases y buscar el primer asset .apk (las listas de releases de GitHub ya vienen ordenadas por fecha)
+    local download_url=""
+    
+    if command -v curl &>/dev/null; then
+        download_url=$(curl -s "https://api.github.com/repos/${repo}/releases" | grep -oP '"browser_download_url":\s*"\K[^"]+\.apk' | head -n 1)
+    elif command -v wget &>/dev/null; then
+        download_url=$(wget -qO- "https://api.github.com/repos/${repo}/releases" | grep -oP '"browser_download_url":\s*"\K[^"]+\.apk' | head -n 1)
+    else
+        error "Se requiere curl o wget para descargar Projectivy Launcher automáticamente."
+        exit 1
+    fi
+
+    if [[ -z "$download_url" ]]; then
+        error "No se pudo encontrar ninguna URL de descarga en el repositorio de GitHub."
+        exit 1
+    fi
+
+    local version_name=$(echo "$download_url" | grep -oP 'download/\K[^/]+')
+    info "Última versión detectada: ${BOLD}${version_name}${NC}"
+    info "Descargando APK desde: $download_url"
+
+    if command -v curl &>/dev/null; then
+        curl -L -o "$target_file" "$download_url"
+    else
+        wget -O "$target_file" "$download_url"
+    fi
+
+    if [[ -f "$target_file" && -s "$target_file" ]]; then
+        ok "Projectivy Launcher descargado con éxito."
+    else
+        error "Fallo al descargar el archivo APK."
+        exit 1
     fi
 }
 
@@ -77,14 +118,17 @@ DEVICE=$(adb shell getprop ro.product.model 2>/dev/null | tr -d '\r')
 ANDROID=$(adb shell getprop ro.build.version.release 2>/dev/null | tr -d '\r')
 ok "Dispositivo: ${BOLD}${DEVICE}${NC} — Android ${BOLD}${ANDROID}${NC}"
 
-# ── Verificar APKs ────────────────────────────────────────────────────────────
+# ── Descarga y Verificación de APKs ───────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APK_PROJ="${SCRIPT_DIR}/proyectivity.apk"
 APK_TVQA="${SCRIPT_DIR}/tvquickactions.apk"
 
+# Ejecutar descarga automática de Projectivy
+download_projectivy "$APK_PROJ"
+
 [[ ! -f "$APK_PROJ" ]] && { error "No se encuentra: proyectivity.apk en ${SCRIPT_DIR}"; exit 1; }
-[[ ! -f "$APK_TVQA" ]] && { error "No se encuentra: tvquickactions.apk en ${SCRIPT_DIR}"; exit 1; }
-ok "APKs encontradas en: ${SCRIPT_DIR}"
+[[ ! -f "$APK_TVQA" ]] && { error "No se encuentra: tvquickactions.apk en ${SCRIPT_DIR}. Asegúrate de colocarlo manualmente."; exit 1; }
+ok "APKs listas en: ${SCRIPT_DIR}"
 
 # ==============================================================================
 #  ELIMINACIÓN DE PAQUETES
@@ -92,8 +136,6 @@ ok "APKs encontradas en: ${SCRIPT_DIR}"
 
 # ── 1. SPYWARE Y TELEMETRÍA ───────────────────────────────────────────────────
 section "1/8 · SPYWARE Y TELEMETRÍA"
-# Prioridad máxima: estos paquetes recopilan y envían datos en segundo plano
-
 remove_pkg "tv.alphonso.alphonso_eula"               "Alphonso — tracking de audiencia por micro (SPYWARE)"
 remove_pkg "com.miui.tv.analytics"                   "Xiaomi analytics — telemetría de uso"
 remove_pkg "com.google.android.feedback"             "Google feedback — envío de errores a Google"
@@ -102,8 +144,6 @@ remove_pkg "com.xiaomi.mitv.updateservice"           "Xiaomi OTA updater — act
 
 # ── 2. BLOATWARE XIAOMI ───────────────────────────────────────────────────────
 section "2/8 · BLOATWARE XIAOMI"
-# Todo el ecosistema de Xiaomi TV: launcher, servicios, canales, contenido propio
-
 remove_pkg "mitv.service"                                  "Servicio principal Xiaomi TV"
 remove_pkg "com.xiaomi.android.tvsetup.partnercustomizer"  "Xiaomi partner customizer (personalización OEM)"
 remove_pkg "com.xiaomi.mitv.res"                           "Recursos adicionales Xiaomi TV"
@@ -120,8 +160,6 @@ remove_pkg "android.autoinstalls.config.xiaomi.mibox3"     "Auto-instalador Xiao
 
 # ── 3. LAUNCHER Y HOME GOOGLE TV ─────────────────────────────────────────────
 section "3/8 · LAUNCHER Y HOME GOOGLE TV"
-# Se reemplaza por Projectivy; eliminar antes para evitar conflictos
-
 remove_pkg "com.google.android.tvlauncher"        "Google TV Launcher (reemplazado por Projectivy)"
 remove_pkg "com.google.android.tv"                "Android TV Home (base del launcher Google)"
 remove_pkg "com.google.android.tvrecommendations" "Motor de recomendaciones TV (consume RAM y CPU)"
@@ -130,8 +168,6 @@ remove_pkg "com.android.dreams.basic"             "Daydreams básico (screensave
 
 # ── 4. GOOGLE ASSISTANT Y VOZ ────────────────────────────────────────────────
 section "4/8 · GOOGLE ASSISTANT Y VOZ"
-# El usuario no usa voz; estos procesos consumen RAM y se activan en background
-
 remove_pkg "com.google.android.katniss"        "Google Search app para Android TV / Assistant"
 remove_pkg "com.google.android.speech.pumpkin" "Motor de reconocimiento de voz offline"
 remove_pkg "com.google.android.marvin.talkback" "TalkBack (accesibilidad por voz para invidentes)"
@@ -139,8 +175,6 @@ remove_pkg "com.google.android.tts"            "Google Text-to-Speech (síntesis
 
 # ── 5. SETUP INICIAL Y WIZARDS ────────────────────────────────────────────────
 section "5/8 · SETUP INICIAL Y WIZARDS"
-# Solo se usan en el primer arranque; ocupan espacio y pueden re-ejecutarse
-
 remove_pkg "com.google.android.onetimeinitializer" "Google one-time init (primer arranque)"
 remove_pkg "com.android.onetimeinitializer"        "Android one-time init (primer arranque)"
 remove_pkg "com.google.android.partnersetup"       "Google partner setup (configuración OEM)"
@@ -149,8 +183,6 @@ remove_pkg "com.android.settings.intelligence"     "Inteligencia de ajustes (sug
 
 # ── 6. BACKUP, SYNC Y NUBE ────────────────────────────────────────────────────
 section "6/8 · BACKUP, SYNC Y NUBE"
-# Un TV stick no necesita sincronizar contactos, calendarios ni hacer backups
-
 remove_pkg "com.google.android.backuptransport"       "Google Backup Transport"
 remove_pkg "com.google.android.syncadapters.contacts" "Sync de contactos con Google"
 remove_pkg "com.google.android.syncadapters.calendar" "Sync de calendario con Google"
@@ -160,14 +192,10 @@ remove_pkg "com.android.sharedstoragebackup"          "Backup de almacenamiento 
 
 # ── 7. CHROMECAST RECEIVER ────────────────────────────────────────────────────
 section "7/8 · CHROMECAST RECEIVER"
-# No se usa Chromecast; mediashell corre en background constantemente
-
 #remove_pkg "com.google.android.apps.mediashell" "Receptor Chromecast (Cast receiver)"
 
 # ── 8. APPS PREINSTALADAS Y MISCELÁNEA ───────────────────────────────────────
 section "8/8 · APPS PREINSTALADAS Y MISCELÁNEA"
-# Streaming (el usuario instala lo que quiera), utilidades inútiles en TV, stubs
-
 remove_pkg "com.google.android.videos"              "Play Movies & TV"
 remove_pkg "com.google.android.play.games"          "Google Play Games"
 remove_pkg "com.google.android.youtube.tv"          "YouTube para TV"
@@ -247,7 +275,6 @@ TVQA_PKG="dev.vodik7.tvquickactions.free"
 TVQA_SVC="${TVQA_PKG}/dev.vodik7.tvquickactions.KeyAccessibilityService"
 
 info "Añadiendo TV Quick Actions al servicio de accesibilidad..."
-# Leer el valor actual y concatenar; nunca sobreescribir Projectivy
 CURRENT_A11Y=$(adb shell settings get secure enabled_accessibility_services 2>/dev/null | tr -d '\r')
 if [[ "$CURRENT_A11Y" == "null" || -z "$CURRENT_A11Y" ]]; then
     adb shell settings put secure enabled_accessibility_services "$TVQA_SVC"
@@ -258,7 +285,7 @@ ok "TV Quick Actions añadido a enabled_accessibility_services"
 
 info "Configurando appops para TV Quick Actions..."
 adb shell appops set "$TVQA_PKG" AUTO_START allow           && ok "AUTO_START: allow"          || warn "AUTO_START — comando no soportado"
-adb shell appops set "$TVQA_PKG" SYSTEM_ALERT_WINDOW allow && ok "SYSTEM_ALERT_WINDOW: allow" || warn "SYSTEM_ALERT_WINDOW — puede no ser necesario"
+adb shell appops set "$TVQA_PKG" SYSTEM_ALERT_WINDOW allow Nu && ok "SYSTEM_ALERT_WINDOW: allow" || warn "SYSTEM_ALERT_WINDOW — puede no ser necesario"
 
 info "Añadiendo TV Quick Actions a whitelist de Doze..."
 adb shell dumpsys deviceidle whitelist +"$TVQA_PKG" && ok "Añadido a whitelist Doze" || warn "No se pudo añadir"
@@ -277,96 +304,73 @@ ok "Projectivy configurado como launcher principal"
 # ==============================================================================
 section "OPTIMIZACIONES DE RENDIMIENTO"
 
-# ── Animaciones ───────────────────────────────────────────────────────────────
 info "Reduciendo escalas de animación a 0.5x..."
 adb shell settings put global animator_duration_scale 0.5
 adb shell settings put global window_animation_scale 0.5
 adb shell settings put global transition_animation_scale 0.5
-ok "Animaciones al 50% — snappier sin desactivarlas del todo"
+ok "Animaciones al 50%"
 
-# ── Renderizado GPU / HWUI ────────────────────────────────────────────────────
 info "Forzando renderizado por GPU (SkiaGL)..."
-# skiagl es el renderer correcto para Android 9; skiaVk (Vulkan) no está soportado en S905Y2
 adb shell setprop persist.debug.hwui.renderer skiagl
 adb shell setprop persist.sys.ui.hw 1
-ok "GPU renderer: skiagl — activado y persistente"
+ok "GPU renderer: skiagl"
 
-# ── Procesos en segundo plano ─────────────────────────────────────────────────
 info "Limitando procesos en segundo plano..."
-# 4 cached processes es un buen balance: las apps están disponibles sin saturar la RAM
 adb shell settings put global background_process_limit 4
-# Reducir el tiempo de settle antes de matar procesos idle
 adb shell settings put global activity_manager_constants \
     "max_cached_processes=6,background_settle_time=30000,fgservice_min_shown_time=2000,fgservice_timeout=20000"
-ok "Límite de procesos background: 4 — activity_manager_constants ajustados"
+ok "Límite de procesos ajustados"
 
-# ── Google Play Protect / verificador de paquetes ────────────────────────────
 info "Desactivando verificación automática de paquetes (Play Protect)..."
-# Elimina el overhead de escaneo en instalaciones y en background
 adb shell settings put global package_verifier_enable 0
 adb shell settings put global verifier_verify_adb_installs 0
-ok "Play Protect / package verifier: OFF"
+ok "Play Protect: OFF"
 
-# ── Portal cautivo ────────────────────────────────────────────────────────────
 info "Desactivando detección de portal cautivo..."
-# Evita peticiones HTTP de validación de red en cada reconexión WiFi
 adb shell settings put global captive_portal_detection_enabled 0
 adb shell settings put global captive_portal_server ""
 ok "Captive portal detection: OFF"
 
-# ── Logging del sistema ───────────────────────────────────────────────────────
 info "Reduciendo tamaño de buffer de logs..."
-# El logger consume I/O y memoria; 64K es suficiente para debug puntual
 adb shell setprop persist.logd.size 64K
 adb shell setprop persist.logd.filter ""
-ok "Log buffer: 64K — I/O de disco reducido"
+ok "Log buffer: 64K"
 
-# ── StrictMode ────────────────────────────────────────────────────────────────
 info "Desactivando StrictMode de desarrollo..."
 adb shell setprop persist.sys.strictmode.visual 0
 adb shell setprop persist.sys.strictmode.disable 1
 ok "StrictMode: OFF"
 
-# ── Sincronización automática ─────────────────────────────────────────────────
 info "Desactivando sincronización automática global..."
-# Ya no hay apps que sincronicen (sin contactos, sin calendario)
 adb shell settings put global auto_sync_for_nonsecure_accounts_enabled 0 2>/dev/null || true
 ok "Auto-sync global: OFF"
 
-# ── Estadísticas de uso ───────────────────────────────────────────────────────
 info "Desactivando envío de estadísticas de uso y errores..."
 adb shell settings put global send_action_app_error 0
 adb shell settings put global dropbox:data_app_crash 0 2>/dev/null || true
 adb shell settings put global dropbox:data_app_anr 0 2>/dev/null || true
 ok "App error reporting: OFF"
 
-# ── Bluetooth ─────────────────────────────────────────────────────────────────
 info "Asegurando que el servicio Bluetooth está activo..."
 adb shell settings put global bluetooth_disabled_profiles 0
-ok "Bluetooth: habilitado y sin perfiles desactivados"
+ok "Bluetooth: habilitado"
 
-# ── Configuración de dispositivo persistente ──────────────────────────────────
-info "Desactivando sincronización de device_config (evita reseteos de ajustes)..."
+info "Desactivando sincronización de device_config..."
 adb shell settings put global device_config_sync_disabled_for_tests persistent
 ok "device_config sync: bloqueado"
 
-# ── Comprobación de conectividad ──────────────────────────────────────────────
 info "Desactivando comprobaciones de conectividad en background..."
 adb shell settings put global network_scorer_app ""
 adb shell settings put global network_recommendations_enabled 0 2>/dev/null || true
 ok "Network scoring: OFF"
 
-# ── Renderer de debug (capa de validación GL) ─────────────────────────────────
 info "Desactivando capas de debug GL/GPU..."
 adb shell settings put global gpu_debug_layers "" 2>/dev/null || true
 adb shell setprop persist.debug.hwui.profile false
 ok "GPU debug layers: OFF"
 
-# ── Configuración específica Amlogic S905Y2 ───────────────────────────────────
 info "Aplicando tweaks para SoC Amlogic S905Y2..."
-# Deshabilitar dumpheap automático (genera ficheros .hprof que llenan el almacenamiento)
 adb shell settings put global enable_dump_heap_traces 0 2>/dev/null || true
-# Limitar dumpsys verbosity
 adb shell setprop persist.sys.dumpheap false 2>/dev/null || true
 ok "Tweaks Amlogic: aplicados"
 
@@ -386,27 +390,16 @@ echo ""
 echo -e "  Ir a: ${BOLD}Ajustes → Opciones de desarrollador${NC}"
 echo ""
 echo -e "  1. ${BOLD}Tamaño buffer de registros${NC}   →  ${GREEN}1 MB${NC}"
-echo -e "     (aumenta la utilidad de los logs si necesitas depurar)"
 echo ""
 echo -e "  2. ${BOLD}Procesos en segundo plano${NC}    →  ${GREEN}Máx. 1 proceso${NC}"
-echo -e "     (máxima liberación de RAM; si notas crashes, sube a 2-4)"
 echo ""
 echo -e "  3. ${BOLD}Renderer HWUI${NC}                →  ${GREEN}skiagl${NC}"
-echo -e "     (confirma que el setprop se ha aplicado correctamente)"
 echo ""
-echo -e "  4. ${BOLD}Activar Projectivy${NC}: la primera vez puede pedir"
-echo -e "     confirmar el launcher por defecto al pulsar Home"
-echo ""
-echo -e "${BOLD}${CYAN}════ NOTA SOBRE ACCESIBILIDAD ════${NC}"
-echo -e "  Si tras reiniciar los servicios de accesibilidad de Projectivy"
-echo -e "  o TV Quick Actions quedan desactivados, ejecuta:"
-echo ""
-echo -e "  ${YELLOW}adb shell appops set com.spocky.projengmenu AUTO_START allow${NC}"
-echo -e "  ${YELLOW}adb shell appops set dev.vodik7.tvquickactions.free AUTO_START allow${NC}"
+echo -e "  4. ${BOLD}Activar Projectivy${NC}: confirma el launcher por defecto si lo pide al pulsar Home"
 echo ""
 
 info "Reiniciando dispositivo en 3 segundos..."
 sleep 3
 adb reboot
 
-echo -e "\n${GREEN}${BOLD}¡Listo! El TV Stick se está reiniciando con la configuración optimizada.${NC}\n"
+echo -e "\n${GREEN}${BOLD}¡Listo! El TV Stick se está reiniciando con la configuración optimizada y Projectivy actualizado.${NC}\n"
