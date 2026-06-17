@@ -189,10 +189,10 @@ configure_tvquickactions_permissions() {
 
 # ── Tweaks de Optimización Global Android TV ──────────────────────────────────
 apply_performance_tweaks() {
-    info "Reduciendo escalas de animación (0.5x)..."
-    adb shell settings put global animator_duration_scale 0.5
-    adb shell settings put global window_animation_scale 0.5
-    adb shell settings put global transition_animation_scale 0.5
+    info "Reduciendo escalas de animación (0.5x)... (Nah, looks like shit)"
+    adb shell settings put global animator_duration_scale 1
+    adb shell settings put global window_animation_scale 1
+    adb shell settings put global transition_animation_scale 1
 
     info "Forzando renderizado HW SkiaGL..."
     adb shell setprop persist.debug.hwui.renderer skiagl
