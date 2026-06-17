@@ -44,8 +44,10 @@ remove_pkg "com.xiaomo.tv.milegal"                         "Contrato Legal de Xi
 remove_pkg "com.mitv.tvlock"                               "Bloqueo de interfaz / Modo hotel Xiaomi"
 remove_pkg "com.mitv.tvhome.mitvplus"                     "Xiaomi Mi TV+ — Streaming FAST irrelevante (consume mucha RAM)"
 remove_pkg "com.mitv.tvhome.michannel"                     "Mi Channel — Canales PatchWall redundantes en Home"
-remove_pkg "com.xiaomi.mitv.updateservice"           "Servicio OTA Xiaomi (Evita que parches futuros rompan cambios)"
+remove_pkg "com.xiaomi.mitv.updateservice"                 "Servicio OTA Xiaomi (Evita que parches futuros rompan cambios)"
 remove_pkg "com.xiaomi.mitv.tvmanager"                     "Mi TV Manager — Limpiador chino inútil (genera overlays molestos)"
+remove_pkg "com.mitv.dream"                                "Xiaomi wallpapers creo"
+remove_pkg "com.mitv.tvhome.atv"                           "No sé que es solo no lo quiero"
 
 section "3/6 · MULTIMEDIA Y GALERÍA STOCK REEMPLAZABLES"
 remove_pkg "com.xiaomi.mitv.mediaexplorer"                 "MediaExplorer — Gestor de archivos stock tosco"
