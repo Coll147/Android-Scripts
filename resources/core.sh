@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-#  Core functions for this potato scripts
+#  Mi TV/Stick Optimizer — Módulo Core Central (core.sh)
 # ==============================================================================
 
 set -uo pipefail
@@ -129,4 +129,86 @@ install_apks_from_folder() {
             fi
         done
     fi
+}
+
+# ── Permisos de Projectivy Launcher ──────────────────────────────────────────
+configure_projectivy_permissions() {
+    local pkg="com.spocky.projengmenu"
+    local svc="${pkg}/com.spocky.projengmenu.services.ProjectivyAccessibilityService"
+    local nls="${pkg}/com.spocky.projengmenu.services.notification.NotificationListener"
+
+    info "Aplicando permisos a Projectivy Launcher..."
+    adb shell pm grant "$pkg" android.permission.WRITE_EXTERNAL_STORAGE    2>/dev/null || true
+    adb shell pm grant "$pkg" android.permission.READ_EXTERNAL_STORAGE     2>/dev/null || true
+    adb shell pm grant "$pkg" android.permission.READ_PHONE_STATE          2>/dev/null || true
+    adb shell pm grant "$pkg" android.permission.READ_TV_LISTINGS          2>/dev/null || true
+    adb shell pm grant "$pkg" android.permission.PACKAGE_USAGE_STATS       2>/dev/null || true
+
+    adb shell settings put secure enabled_notification_listeners "$nls"
+    adb shell settings put secure accessibility_enabled 1
+    adb shell settings put secure enabled_accessibility_services "$svc"
+
+    adb shell appops set "$pkg" AUTO_START allow 2>/dev/null || true
+    adb shell appops set "$pkg" SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+    adb shell dumpsys deviceidle whitelist +"$pkg" &>/dev/null || true
+    ok "Projectivy configurado con éxito."
+}
+
+# ── Permisos de TV Quick Actions ──────────────────────────────────────────────
+configure_tvquickactions_permissions() {
+    local pkg="dev.vodik7.tvquickactions.free"
+    local svc="${pkg}/dev.vodik7.tvquickactions.KeyAccessibilityService"
+
+    if adb shell pm list packages 2>/dev/null | grep -q "^package:${pkg}$"; then
+        info "Configurando permisos específicos para TV Quick Actions..."
+        local current_a11y=$(adb shell settings get secure enabled_accessibility_services 2>/dev/null | tr -d '\r')
+        
+        if [[ "$current_a11y" == "null" || -z "$current_a11y" ]]; then
+            adb shell settings put secure enabled_accessibility_services "$svc"
+        elif [[ "$current_a11y" != *"$svc"* ]]; then
+            adb shell settings put secure enabled_accessibility_services "${current_a11y}:${svc}"
+        fi
+
+        adb shell appops set "$pkg" AUTO_START allow 2>/dev/null || true
+        adb shell appops set "$pkg" SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+        adb shell dumpsys deviceidle whitelist +"$pkg" &>/dev/null || true
+        ok "TV Quick Actions enlazado al sistema."
+    fi
+}
+
+# ── Tweaks de Optimización Global Android TV ──────────────────────────────────
+apply_performance_tweaks() {
+    info "Reduciendo escalas de animación (0.5x)..."
+    adb shell settings put global animator_duration_scale 0.5
+    adb shell settings put global window_animation_scale 0.5
+    adb shell settings put global transition_animation_scale 0.5
+
+    info "Forzando renderizado HW SkiaGL..."
+    adb shell setprop persist.debug.hwui.renderer skiagl
+    adb shell setprop persist.sys.ui.hw 1
+
+    info "Ajustando límites de procesos en background y Doze..."
+    adb shell settings put global background_process_limit 4
+    adb shell settings put global activity_manager_constants \
+        "max_cached_processes=6,background_settle_time=30000,fgservice_min_shown_time=2000,fgservice_timeout=20000"
+
+    info "Inhabilitando Play Protect (ADB installs)..."
+    adb shell settings put global package_verifier_enable 0
+    adb shell settings put global verifier_verify_adb_installs 0
+
+    info "Silenciando capturas de telemetría y buffers de logs..."
+    adb shell settings put global captive_portal_detection_enabled 0
+    adb shell setprop persist.logd.size 64K
+    adb shell setprop persist.sys.strictmode.disable 1
+    
+    adb shell settings put global send_action_app_error 0
+    adb shell settings put global dropbox:data_app_crash 0 2>/dev/null || true
+    adb shell settings put global dropbox:data_app_anr 0 2>/dev/null || true
+    adb shell settings put global device_config_sync_disabled_for_tests persistent
+
+    info "Aplicando parches de rendimiento para SoC MediaTek/Amlogic..."
+    adb shell setprop persist.debug.hwui.profile false
+    adb shell settings put global enable_dump_heap_traces 0 2>/dev/null || true
+    adb shell setprop persist.sys.dumpheap false 2>/dev/null || true
+    ok "Ajustes de entorno del sistema completados."
 }

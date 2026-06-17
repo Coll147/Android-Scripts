@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-#  Mi TV Stick — Android TV 9
+#  Mi TV Stick - Android 9
 # ==============================================================================
 
 set -uo pipefail
@@ -34,7 +34,7 @@ fi
 download_projectivy "$APK_PROJ"
 
 # ==============================================================================
-#  ELIMINACIÓN DE PAQUETES (BLOATWARE)
+#  ELIMINACIÓN DE PAQUETES (BLOATWARE COMPLETO PARA STICK)
 # ==============================================================================
 
 section "1/8 · SPYWARE Y TELEMETRÍA"
@@ -49,7 +49,7 @@ remove_pkg "mitv.service"                                  "Servicio principal X
 remove_pkg "com.xiaomi.android.tvsetup.partnercustomizer"  "Xiaomi partner customizer (personalización OEM)"
 remove_pkg "com.xiaomi.mitv.res"                           "Recursos adicionales Xiaomi TV"
 remove_pkg "com.xiaomo.tv.milegal"                         "Aviso legal Xiaomi (pop-up inicial)"
-remove_pkg "com.mitv.tvhome.atv"                           "Launcher Xiaomi ATV (home principal)"
+remove_pkg "com.mitv.tvhome.atv"                           "Launcher Xiaomi ATV (home principal / PatchWall)"
 remove_pkg "com.mitv.tvhome.michannel"                     "Canales Xiaomi en pantalla de inicio"
 remove_pkg "com.mitv.milinkservice"                        "MiLink — screen mirroring Xiaomi"
 remove_pkg "com.mitv.download.service"                     "Descargador de contenido Xiaomi"
@@ -108,128 +108,22 @@ remove_pkg "com.google.android.tv.frameworkpackagestubs" "Framework stubs de com
 remove_pkg "com.android.vpndialogs"                 "Diálogos VPN (rara vez necesario en TV)"
 
 # ==============================================================================
-#  INSTALACIÓN DE LA CARPETA 'APKS'
+#  INSTALACIÓN, PERMISOS Y TWEAKS VIA CORE
 # ==============================================================================
 section "INSTALANDO APKs DE LA CARPETA 'apks'"
 install_apks_from_folder "$APK_DIR"
 
-# ==============================================================================
-#  CONFIGURACIÓN DE PERMISOS PROJECTIVITY / TVQUICKACTIONS
-# ==============================================================================
-section "PERMISOS — PROJECTIVY LAUNCHER"
-PROJ_PKG="com.spocky.projengmenu"
-PROJ_SVC="${PROJ_PKG}/com.spocky.projengmenu.services.ProjectivyAccessibilityService"
-PROJ_NLS="${PROJ_PKG}/com.spocky.projengmenu.services.notification.NotificationListener"
+section "ASIGNACIÓN DE PERMISOS"
+configure_projectivy_permissions
+configure_tvquickactions_permissions
 
-info "Permisos de almacenamiento y sistema..."
-adb shell pm grant "$PROJ_PKG" android.permission.WRITE_EXTERNAL_STORAGE    2>/dev/null && ok "WRITE_EXTERNAL_STORAGE"     || warn "WRITE_EXTERNAL_STORAGE — saltado"
-adb shell pm grant "$PROJ_PKG" android.permission.READ_EXTERNAL_STORAGE     2>/dev/null && ok "READ_EXTERNAL_STORAGE"      || warn "READ_EXTERNAL_STORAGE — saltado"
-adb shell pm grant "$PROJ_PKG" android.permission.READ_PHONE_STATE          2>/dev/null && ok "READ_PHONE_STATE"           || warn "READ_PHONE_STATE — saltado"
-adb shell pm grant "$PROJ_PKG" android.permission.READ_TV_LISTINGS          2>/dev/null && ok "READ_TV_LISTINGS"           || warn "READ_TV_LISTINGS — saltado"
-adb shell pm grant "$PROJ_PKG" android.permission.PACKAGE_USAGE_STATS       2>/dev/null && ok "PACKAGE_USAGE_STATS"        || warn "PACKAGE_USAGE_STATS — saltado"
-
-info "Configurando listener de notificaciones..."
-adb shell settings put secure enabled_notification_listeners "$PROJ_NLS"
-ok "Notification listener configurado"
-
-info "Configurando servicio de accesibilidad..."
-adb shell settings put secure accessibility_enabled 1
-adb shell settings put secure enabled_accessibility_services "$PROJ_SVC"
-ok "Accesibilidad activada para Projectivy"
-
-info "Configurando appops para Projectivy..."
-adb shell appops set "$PROJ_PKG" AUTO_START allow              && ok "AUTO_START: allow"          || warn "AUTO_START — comando no soportado"
-adb shell appops set "$PROJ_PKG" SYSTEM_ALERT_WINDOW allow    && ok "SYSTEM_ALERT_WINDOW: allow" || warn "SYSTEM_ALERT_WINDOW — saltado"
-adb shell appops set "$PROJ_PKG" READ_PHONE_STATE allow        2>/dev/null || true
-
-info "Añadiendo Projectivy a whitelist de Doze..."
-adb shell dumpsys deviceidle whitelist +"$PROJ_PKG" && ok "Añadido a whitelist Doze" || warn "No se pudo añadir a Doze whitelist"
-
-
-section "PERMISOS — TV QUICK ACTIONS"
-
-TVQA_PKG="dev.vodik7.tvquickactions.free"
-TVQA_SVC="${TVQA_PKG}/dev.vodik7.tvquickactions.KeyAccessibilityService"
-
-if adb shell pm list packages 2>/dev/null | grep -q "^package:${TVQA_PKG}$"; then
-    section "PERMISOS — TV QUICK ACTIONS"
-
-    info "Añadiendo TV Quick Actions al servicio de accesibilidad..."
-    CURRENT_A11Y=$(adb shell settings get secure enabled_accessibility_services 2>/dev/null | tr -d '\r')
-    if [[ "$CURRENT_A11Y" == "null" || -z "$CURRENT_A11Y" ]]; then
-        adb shell settings put secure enabled_accessibility_services "$TVQA_SVC"
-    else
-        if [[ "$CURRENT_A11Y" != *"$TVQA_SVC"* ]]; then
-            adb shell settings put secure enabled_accessibility_services "${CURRENT_A11Y}:${TVQA_SVC}"
-        fi
-    fi
-    ok "TV Quick Actions añadido a enabled_accessibility_services"
-
-    info "Configurando appops para TV Quick Actions..."
-    adb shell appops set "$TVQA_PKG" AUTO_START allow           && ok "AUTO_START: allow"          || warn "AUTO_START — comando no soportado"
-    adb shell appops set "$TVQA_PKG" SYSTEM_ALERT_WINDOW allow  && ok "SYSTEM_ALERT_WINDOW: allow" || warn "SYSTEM_ALERT_WINDOW — saltado"
-
-    info "Añadiendo TV Quick Actions a whitelist de Doze..."
-    adb shell dumpsys deviceidle whitelist +"$TVQA_PKG" && ok "Añadido a whitelist Doze" || warn "No se pudo añadir"
-fi
-
-# ── Establecer Home Principal ────────────────────────────────────────────────
 section "LAUNCHER POR DEFECTO"
 info "Estableciendo Projectivy como home activity..."
-adb shell cmd package set-home-activity "${PROJ_PKG}/.ui.home.MainActivity"
+adb shell cmd package set-home-activity "com.spocky.projengmenu/.ui.home.MainActivity"
 ok "Projectivy configurado como launcher principal"
 
-# ==============================================================================
-#  OPTIMIZACIONES DE ENTORNOS Y RENDIMIENTO (SYS TWEAKS)
-# ==============================================================================
-section "OPTIMIZACIONES DE RENDIMIENTO"
-
-info "Ajustando escalas de animación a 0.5x..."
-adb shell settings put global animator_duration_scale 0.5
-adb shell settings put global window_animation_scale 0.5
-adb shell settings put global transition_animation_scale 0.5
-
-info "Forzando renderizado por HW (SkiaGL)..."
-adb shell setprop persist.debug.hwui.renderer skiagl
-adb shell setprop persist.sys.ui.hw 1
-
-info "Ajustando límites en ActivityManager y Doze..."
-adb shell settings put global background_process_limit 4
-adb shell settings put global activity_manager_constants \
-    "max_cached_processes=6,background_settle_time=30000,fgservice_min_shown_time=2000,fgservice_timeout=20000"
-
-info "Desactivando Play Protect y verificadores remotos..."
-adb shell settings put global package_verifier_enable 0
-adb shell settings put global verifier_verify_adb_installs 0
-
-info "Desactivando captura y chequeo de portal cautivo..."
-adb shell settings put global captive_portal_detection_enabled 0
-adb shell settings put global captive_portal_server ""
-
-info "Reduciendo I/O de logs a 64K..."
-adb shell setprop persist.logd.size 64K
-adb shell setprop persist.logd.filter ""
-
-info "Inhabilitando telemetría de fallos y StrictMode..."
-adb shell setprop persist.sys.strictmode.visual 0
-adb shell setprop persist.sys.strictmode.disable 1
-adb shell settings put global send_action_app_error 0
-adb shell settings put global dropbox:data_app_crash 0 2>/dev/null || true
-adb shell settings put global dropbox:data_app_anr 0 2>/dev/null || true
-
-info "Estabilizando servicios esenciales (Bluetooth, Sync, Config)..."
-adb shell settings put global bluetooth_disabled_profiles 0
-adb shell settings put global auto_sync_for_nonsecure_accounts_enabled 0 2>/dev/null || true
-adb shell settings put global device_config_sync_disabled_for_tests persistent
-adb shell settings put global network_scorer_app ""
-adb shell settings put global network_recommendations_enabled 0 2>/dev/null || true
-adb shell settings put global gpu_debug_layers "" 2>/dev/null || true
-adb shell setprop persist.debug.hwui.profile false
-
-info "Aplicando optimizaciones específicas del SoC Amlogic..."
-adb shell settings put global enable_dump_heap_traces 0 2>/dev/null || true
-adb shell setprop persist.sys.dumpheap false 2>/dev/null || true
-ok "Fase de optimizaciones de rendimiento completada"
+section "APLICACIÓN TWEAKS RENDIMIENTO GLOBAL"
+apply_performance_tweaks
 
 # ==============================================================================
 #  RESUMEN FINAL
@@ -238,19 +132,27 @@ section "RESUMEN"
 
 echo -e "  ${GREEN}✓ Desinstalados:        ${BOLD}${REMOVED}${NC}"
 echo -e "  ${YELLOW}⚠ Deshabilitados:       ${BOLD}${DISABLED}${NC}"
-echo -e "  ${BLUE}↷ Saltados:             ${BOLD}${SKIPPED}${NC}  (no instalados de origen)"
+echo -e "  ${BLUE}↷ Saltados:             ${BOLD}${SKIPPED}${NC}  (no estaban instalados)"
 echo -e "  ${RED}✗ Fallidos bloat:       ${BOLD}${FAILED}${NC}"
 echo -e "  ${GREEN}✓ APKs Instaladas:      ${BOLD}${INSTALLED_APKS}${NC}"
 [[ $FAILED_APKS -gt 0 ]] && echo -e "  ${RED}✗ APKs Fallidas:        ${BOLD}${FAILED_APKS}${NC}"
 
-echo -e "\n${BOLD}${CYAN}════ PASOS MANUALES RECOMENDADOS EN EL TV ════${NC}\n"
-echo -e "  Ir a Ajustes → Opciones de desarrollador:"
+echo ""
+echo -e "${BOLD}${CYAN}════ PASOS MANUALES RECOMENDADOS (en el TV) ════${NC}"
+echo ""
+echo -e "  Ir a: ${BOLD}Ajustes → Opciones de desarrollador${NC}"
+echo ""
 echo -e "  1. ${BOLD}Tamaño buffer de registros${NC}   →  ${GREEN}1 MB${NC}"
+echo ""
 echo -e "  2. ${BOLD}Procesos en segundo plano${NC}    →  ${GREEN}Máx. 1 proceso${NC}"
+echo ""
 echo -e "  3. ${BOLD}Renderer HWUI${NC}                →  ${GREEN}skiagl${NC}"
-echo -e "  4. Presiona el botón ${BOLD}Home${NC} y confirma Projectivy si es necesario.\n"
+echo ""
+echo -e "  4. ${BOLD}Activar Projectivy${NC}: confirma el launcher por defecto si lo pide al pulsar Home"
+echo ""
 
-info "Reiniciando TV Stick en 3 segundos..."
+info "Reiniciando dispositivo en 3 segundos..."
 sleep 3
 adb reboot
-ok "Completado. Reiniciando con entorno limpio."
+
+echo -e "\n${GREEN}${BOLD}¡Listo! El TV Stick se está reiniciando con la configuración optimizada.${NC}\n"
