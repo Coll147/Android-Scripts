@@ -58,7 +58,7 @@ remove_pkg "com.mitv.gallery"                              "Galería de fotos na
 section "4/6 · RECOMENDACIONES Y PROVEEDORES ASISTENTES"
 remove_pkg "com.google.android.tvrecommendations"         "Google TV Recommendations — Algoritmos devoradores de CPU"
 remove_pkg "com.google.android.leanbacklauncher.recommendations" "Módulo antiguo de sugerencias Leanback"
-remove_pkg "com.google.android.katniss"                    "Google Assistant / Búsqueda por voz nativa (Opcional)"
+#remove_pkg "com.google.android.katniss"                    "Google Assistant / Búsqueda por voz nativa (Opcional)"
 remove_pkg "com.google.android.speech.pumpkin"             "Motor offline de conversión voz a texto"
 remove_pkg "com.google.android.marvin.talkback"           "TalkBack — Accesibilidad guiada por voz"
 remove_pkg "com.google.android.tts"                        "Text-To-Speech Google"
