@@ -49,7 +49,7 @@ remove_pkg() {
 # ── Descarga Inteligente de Projectivy Launcher (Anti-Rate-Limit) ─────────────
 download_projectivy() {
     local target_file="$1"
-    local repo="spocky/ProjectivyLauncher"
+    local repo="spocky/miproja1"
     
     # SALVAGUARDA: Si el archivo ya existe localmente, evita llamar a la API de GitHub
     if [[ -f "$target_file" && -s "$target_file" ]]; then
