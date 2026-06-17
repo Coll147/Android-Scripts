@@ -7,7 +7,7 @@ set -uo pipefail
 
 # Obtener la ruta del script para enlazar el core e interactuar con directorios
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CORE_SCRIPT="${SCRIPT_DIR}/core.sh"
+CORE_SCRIPT="${SCRIPT_DIR}/resources/core.sh"
 
 # Importar el script core de funciones modulares
 if [[ -f "$CORE_SCRIPT" ]]; then

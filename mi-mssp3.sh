@@ -6,7 +6,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CORE_SCRIPT="${SCRIPT_DIR}/core.sh"
+CORE_SCRIPT="${SCRIPT_DIR}/resources/core.sh"
 
 if [[ -f "$CORE_SCRIPT" ]]; then
     source "$CORE_SCRIPT"
