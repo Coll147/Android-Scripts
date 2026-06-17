@@ -4,18 +4,19 @@
 #
 #  Requisitos:
 #    - adb instalado y en el PATH
-#    - curl o wget instalados (para descargar el APK)
+#    - curl o wget instalados (para descargar el APK de Projectivy)
 #    - Dispositivo conectado y autorizado (depuración ADB activada)
 # ==============================================================================
 
 set -uo pipefail
 
 # ── Colores ──────────────────────────────────────────────────────────────────
-RED='\033[0;31m';  GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-BLUE='\033[0;34m'; CYAN='\033[0;36m';  BOLD='\033[1m'; NC='\033[0m'
+RED='\033;31m';  GREEN='\033;32m'; YELLOW='\033[1;33m'
+BLUE='\033;34m'; CYAN='\033;36m';  BOLD='\033[1m'; NC='\033[0m'
 
 # ── Contadores ────────────────────────────────────────────────────────────────
 REMOVED=0; DISABLED=0; SKIPPED=0; FAILED=0
+INSTALLED_APKS=0; FAILED_APKS=0
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 info()    { echo -e "${BLUE}[INFO]${NC}  $*"; }
@@ -58,7 +59,6 @@ download_projectivy() {
     
     info "Buscando la última versión de Projectivy Launcher (incluyendo betas)..."
     
-    # Obtener el JSON de todas las releases y buscar el primer asset .apk (las listas de releases de GitHub ya vienen ordenadas por fecha)
     local download_url=""
     
     if command -v curl &>/dev/null; then
@@ -86,9 +86,9 @@ download_projectivy() {
     fi
 
     if [[ -f "$target_file" && -s "$target_file" ]]; then
-        ok "Projectivy Launcher descargado con éxito."
+        ok "Projectivy Launcher listo para instalar."
     else
-        error "Fallo al descargar el archivo APK."
+        error "Fallo al descargar el archivo APK de Projectivy."
         exit 1
     fi
 }
@@ -118,17 +118,19 @@ DEVICE=$(adb shell getprop ro.product.model 2>/dev/null | tr -d '\r')
 ANDROID=$(adb shell getprop ro.build.version.release 2>/dev/null | tr -d '\r')
 ok "Dispositivo: ${BOLD}${DEVICE}${NC} — Android ${BOLD}${ANDROID}${NC}"
 
-# ── Descarga y Verificación de APKs ───────────────────────────────────────────
+# ── Configuración de Directorios y Descarga ───────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APK_PROJ="${SCRIPT_DIR}/proyectivity.apk"
-APK_TVQA="${SCRIPT_DIR}/tvquickactions.apk"
+APK_DIR="${SCRIPT_DIR}/apks"
+APK_PROJ="${APK_DIR}/proyectivity.apk"
 
-# Ejecutar descarga automática de Projectivy
+# Asegurar que la carpeta 'apks' existe
+if [[ ! -d "$APK_DIR" ]]; then
+    info "Creando la carpeta '${APK_DIR}'..."
+    mkdir -p "$APK_DIR"
+fi
+
+# Descargar Projectivy directamente dentro de la carpeta 'apks'
 download_projectivy "$APK_PROJ"
-
-[[ ! -f "$APK_PROJ" ]] && { error "No se encuentra: proyectivity.apk en ${SCRIPT_DIR}"; exit 1; }
-[[ ! -f "$APK_TVQA" ]] && { error "No se encuentra: tvquickactions.apk en ${SCRIPT_DIR}. Asegúrate de colocarlo manualmente."; exit 1; }
-ok "APKs listas en: ${SCRIPT_DIR}"
 
 # ==============================================================================
 #  ELIMINACIÓN DE PAQUETES
@@ -213,24 +215,30 @@ remove_pkg "com.google.android.tv.frameworkpackagestubs" "Framework stubs de com
 remove_pkg "com.android.vpndialogs"                 "Diálogos VPN (rara vez necesario en TV)"
 
 # ==============================================================================
-#  INSTALACIÓN DE LAUNCHERS
+#  INSTALACIÓN AUTOMÁTICA DE LA CARPETA 'APKS'
 # ==============================================================================
-section "INSTALANDO LAUNCHERS"
+section "INSTALANDO APKs DE LA CARPETA 'apks'"
 
-info "Instalando Projectivy Launcher..."
-if adb install -r "$APK_PROJ" &>/dev/null; then
-    ok "Projectivy Launcher instalado correctamente"
-else
-    error "Fallo al instalar Projectivy Launcher. Verifica el APK."
-    exit 1
-fi
+# Comprobar si hay archivos .apk en el directorio
+shopt -s nullglob
+apk_files=("$APK_DIR"/*.apk)
+shopt -u nullglob
 
-info "Instalando TV Quick Actions..."
-if adb install -r "$APK_TVQA" &>/dev/null; then
-    ok "TV Quick Actions instalado correctamente"
+if [[ ${#apk_files[@]} -eq 0 ]]; then
+    warn "No se encontraron archivos APK adicionales en la carpeta '${APK_DIR}'."
 else
-    error "Fallo al instalar TV Quick Actions. Verifica el APK."
-    exit 1
+    for apk in "${apk_files[@]}"; do
+        filename=$(basename "$apk")
+        info "Instalando: ${filename}..."
+        
+        if adb install -r "$apk" &>/dev/null; then
+            ok "Instalado correctamente: ${filename}"
+            ((INSTALLED_APKS++))
+        else
+            error "Fallo al instalar: ${filename}"
+            ((FAILED_APKS++))
+        fi
+    done
 fi
 
 # ==============================================================================
@@ -267,28 +275,33 @@ info "Añadiendo Projectivy a whitelist de Doze..."
 adb shell dumpsys deviceidle whitelist +"$PROJ_PKG" && ok "Añadido a whitelist Doze" || warn "No se pudo añadir a Doze whitelist"
 
 # ==============================================================================
-#  PERMISOS — TV QUICK ACTIONS
+#  PERMISOS — TV QUICK ACTIONS (Solo si se detecta su instalación)
 # ==============================================================================
-section "PERMISOS — TV QUICK ACTIONS"
-
 TVQA_PKG="dev.vodik7.tvquickactions.free"
 TVQA_SVC="${TVQA_PKG}/dev.vodik7.tvquickactions.KeyAccessibilityService"
 
-info "Añadiendo TV Quick Actions al servicio de accesibilidad..."
-CURRENT_A11Y=$(adb shell settings get secure enabled_accessibility_services 2>/dev/null | tr -d '\r')
-if [[ "$CURRENT_A11Y" == "null" || -z "$CURRENT_A11Y" ]]; then
-    adb shell settings put secure enabled_accessibility_services "$TVQA_SVC"
-else
-    adb shell settings put secure enabled_accessibility_services "${CURRENT_A11Y}:${TVQA_SVC}"
+if adb shell pm list packages 2>/dev/null | grep -q "^package:${TVQA_PKG}$"; then
+    section "PERMISOS — TV QUICK ACTIONS"
+
+    info "Añadiendo TV Quick Actions al servicio de accesibilidad..."
+    CURRENT_A11Y=$(adb shell settings get secure enabled_accessibility_services 2>/dev/null | tr -d '\r')
+    if [[ "$CURRENT_A11Y" == "null" || -z "$CURRENT_A11Y" ]]; then
+        adb shell settings put secure enabled_accessibility_services "$TVQA_SVC"
+    else
+        # Evitar duplicar si ya estaba en la cadena de accesibilidad
+        if [[ "$CURRENT_A11Y" != *"$TVQA_SVC"* ]]; then
+            adb shell settings put secure enabled_accessibility_services "${CURRENT_A11Y}:${TVQA_SVC}"
+        fi
+    fi
+    ok "TV Quick Actions añadido a enabled_accessibility_services"
+
+    info "Configurando appops para TV Quick Actions..."
+    adb shell appops set "$TVQA_PKG" AUTO_START allow           && ok "AUTO_START: allow"          || warn "AUTO_START — comando no soportado"
+    adb shell appops set "$TVQA_PKG" SYSTEM_ALERT_WINDOW allow  && ok "SYSTEM_ALERT_WINDOW: allow" || warn "SYSTEM_ALERT_WINDOW — puede no ser necesario"
+
+    info "Añadiendo TV Quick Actions a whitelist de Doze..."
+    adb shell dumpsys deviceidle whitelist +"$TVQA_PKG" && ok "Añadido a whitelist Doze" || warn "No se pudo añadir"
 fi
-ok "TV Quick Actions añadido a enabled_accessibility_services"
-
-info "Configurando appops para TV Quick Actions..."
-adb shell appops set "$TVQA_PKG" AUTO_START allow           && ok "AUTO_START: allow"          || warn "AUTO_START — comando no soportado"
-adb shell appops set "$TVQA_PKG" SYSTEM_ALERT_WINDOW allow Nu && ok "SYSTEM_ALERT_WINDOW: allow" || warn "SYSTEM_ALERT_WINDOW — puede no ser necesario"
-
-info "Añadiendo TV Quick Actions a whitelist de Doze..."
-adb shell dumpsys deviceidle whitelist +"$TVQA_PKG" && ok "Añadido a whitelist Doze" || warn "No se pudo añadir"
 
 # ==============================================================================
 #  ESTABLECER PROJECTIVY COMO LAUNCHER POR DEFECTO
@@ -379,10 +392,14 @@ ok "Tweaks Amlogic: aplicados"
 # ==============================================================================
 section "RESUMEN"
 
-echo -e "  ${GREEN}✓ Desinstalados:   ${BOLD}${REMOVED}${NC}"
-echo -e "  ${YELLOW}⚠ Deshabilitados:  ${BOLD}${DISABLED}${NC}"
-echo -e "  ${BLUE}↷ Saltados:        ${BOLD}${SKIPPED}${NC}  (no estaban instalados)"
-echo -e "  ${RED}✗ Fallidos:        ${BOLD}${FAILED}${NC}"
+echo -e "  ${GREEN}✓ Desinstalados:        ${BOLD}${REMOVED}${NC}"
+echo -e "  ${YELLOW}⚠ Deshabilitados:       ${BOLD}${DISABLED}${NC}"
+echo -e "  ${BLUE}↷ Saltados:             ${BOLD}${SKIPPED}${NC}  (no estaban instalados)"
+echo -e "  ${RED}✗ Fallidos bloat:       ${BOLD}${FAILED}${NC}"
+echo -e "  ${GREEN}✓ APKs Instaladas:      ${BOLD}${INSTALLED_APKS}${NC}"
+if [[ $FAILED_APKS -gt 0 ]]; then
+echo -e "  ${RED}✗ APKs Fallidas:        ${BOLD}${FAILED_APKS}${NC}"
+fi
 
 echo ""
 echo -e "${BOLD}${CYAN}════ PASOS MANUALES RECOMENDADOS (en el TV) ════${NC}"
@@ -402,4 +419,4 @@ info "Reiniciando dispositivo en 3 segundos..."
 sleep 3
 adb reboot
 
-echo -e "\n${GREEN}${BOLD}¡Listo! El TV Stick se está reiniciando con la configuración optimizada y Projectivy actualizado.${NC}\n"
+echo -e "\n${GREEN}${BOLD}¡Listo! El TV Stick se está reiniciando con la configuración optimizada.${NC}\n"
