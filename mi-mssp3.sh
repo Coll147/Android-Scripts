@@ -79,7 +79,7 @@ remove_pkg "com.google.android.play.games"                "Google Play Games par
 remove_pkg "com.google.android.youtube.tv"                "YouTube Oficial (Instalar SmartTube desde apks/)"
 remove_pkg "com.google.android.youtube.tvmusic"           "YouTube Music Oficial"
 remove_pkg "com.amazon.amazonvideo.livingroom"            "Amazon Prime Video"
-remove_pkg "com.netflix.ninja"                            "Netflix Nativo"
+#remove_pkg "com.netflix.ninja"                            "Netflix Nativo" If you dont use netflix delete it, but i think it meeses up the netflix hd thing, just in case
 remove_pkg "com.android.printspooler"                     "Servicio de Impresión"
 remove_pkg "com.android.htmlviewer"                       "Visor HTML"
 remove_pkg "com.android.vpndialogs"                       "Diálogos de red VPN"
