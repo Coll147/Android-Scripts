@@ -180,10 +180,10 @@ remove_pkg "com.google.android.tv.frameworkpackagestubs" "Compatibility stubs"
 
 # --- TCL hardware/firmware (DO NOT REMOVE) ---
 # remove_pkg "com.tcl.system.server"                               # TCL system process
-remove_pkg "com.tcl.tcl_bt_rcu_service"                          # Bluetooth remote (breaks remote)
+remove_pkg "com.tcl.tcl_bt_rcu_service"                          # Bluetooth remote (breaks remote) - suposedly
 # remove_pkg "com.tcl.tvinput"                                     # HDMI / tuner inputs
 # remove_pkg "com.tcl.providers.config"                            # shared config
-# remove_pkg "com.tcl.tv"                                          # umbrella TCL TV service
+# remove_pkg "com.tcl.tv"                                          # Live TV App
 # remove_pkg "com.tcl.android.webview"                             # TCL WebView variant
 # remove_pkg "com.android.tv.settings"                             # native TV settings
 # remove_pkg "com.android.tv.settings.gms.resoverlay"              # settings overlay
