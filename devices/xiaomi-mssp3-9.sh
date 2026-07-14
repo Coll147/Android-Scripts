@@ -89,7 +89,7 @@ remove_pkg "com.android.sharedstoragebackup"         "Shared storage backup"
 remove_pkg "com.android.wallpaperbackup"             "Wallpaper backup"
 remove_pkg "com.android.providers.userdictionary"    "User dictionary"
 
-# --- Critical components, MediaTek & Android core (DO NOT REMOVE) ---
+# --- MediaTek & Android core ---
 # remove_pkg "mitv.service"                                 # Xiaomi TV core service
 # remove_pkg "com.xiaomi.android.tvsetup.partnercustomizer" # initial partner setup
 # remove_pkg "com.xiaomi.floatingframe"                     # frame rendering
@@ -135,7 +135,7 @@ remove_pkg "com.android.providers.userdictionary"    "User dictionary"
 # remove_pkg "com.google.android.tungsten.setupwraith"      # initial setup assistant
 # remove_pkg "android"                                      # Android core
 
-# --- MediaTek / MStar board-specific (DO NOT REMOVE unless sure) ---
+# --- MediaTek / MStar board-specific ---
 # remove_pkg "com.mediatek.twoworlds.test.fapi"             # MediaTek test API
 # remove_pkg "com.mediatek.tvinput"                         # physical TV inputs (HDMI/AV)
 # remove_pkg "com.mediatek.wwtv.setupwizard"                # channel tuning wizard
