@@ -28,7 +28,7 @@ APK_PROJ="${APK_DIR}/proyectivity.apk"
 download_projectivy "$APK_PROJ"
 
 # ==============================================================================
-#  PACKAGES (unified list)
+#  PACKAGES
 # ==============================================================================
 section "PACKAGES"
 

@@ -36,9 +36,7 @@ fi
 download_projectivy "$APK_PROJ"
 
 # ==============================================================================
-#  PACKAGES (unified list)
-#  - Lines with 'remove_pkg' will be uninstalled.
-#  - Lines with '# remove_pkg' are kept (commented out).
+#  PACKAGES
 # ==============================================================================
 section "PACKAGES"
 
