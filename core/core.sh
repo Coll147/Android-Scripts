@@ -24,7 +24,7 @@ section() { echo -e "\n${BOLD}${CYAN}▓▓▒░  $* ░▒▓▓${NC}\n"; }
 # ── Package removal logic ──────────────────────────────────────────────────
 remove_pkg() {
     local pkg="$1"
-    local desc="$2"
+    local desc="${2:-}"
 
     if ! adb shell pm list packages 2>/dev/null | grep -q "^package:${pkg}$"; then
         skip "${pkg} (${desc}) — not found"

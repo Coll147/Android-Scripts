@@ -118,7 +118,7 @@ remove_pkg "com.android.vpndialogs"                "VPN dialogs (rarely needed)"
 remove_pkg "com.google.android.sss.authbridge"     "Google OAuth bridge (obsolete)"
 remove_pkg "com.google.android.tv.frameworkpackagestubs" "Compatibility stubs"
 
-# --- Android core (DO NOT REMOVE) ---
+# --- Android core ---
 # remove_pkg "android"                                             # system base
 # remove_pkg "com.android.systemui"                                # system UI
 # remove_pkg "com.android.shell"                                   # shell (used by adb)
@@ -180,7 +180,7 @@ remove_pkg "com.google.android.tv.frameworkpackagestubs" "Compatibility stubs"
 
 # --- TCL hardware/firmware (DO NOT REMOVE) ---
 # remove_pkg "com.tcl.system.server"                               # TCL system process
-# remove_pkg "com.tcl.tcl_bt_rcu_service"                          # Bluetooth remote (breaks remote)
+remove_pkg "com.tcl.tcl_bt_rcu_service"                          # Bluetooth remote (breaks remote)
 # remove_pkg "com.tcl.tvinput"                                     # HDMI / tuner inputs
 # remove_pkg "com.tcl.providers.config"                            # shared config
 # remove_pkg "com.tcl.tv"                                          # umbrella TCL TV service
@@ -189,7 +189,7 @@ remove_pkg "com.google.android.tv.frameworkpackagestubs" "Compatibility stubs"
 # remove_pkg "com.android.tv.settings.gms.resoverlay"              # settings overlay
 # remove_pkg "com.google.android.tv.remote.service"                # remote service
 
-# --- Google Assistant / Home / Play Store (kept) ---
+# --- Google Assistant / Home / Play Store ---
 # remove_pkg "com.google.android.katniss"                          # keep - voice search
 # remove_pkg "com.google.android.tv.assistant"                     # keep - Assistant
 # remove_pkg "com.google.android.tts"                              # keep - TTS
